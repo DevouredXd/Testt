@@ -4,6 +4,6 @@
   "version": "22",
   "authors": ["You"],
   "license": "MIT",
-  "main": "index.js",
+  "main": "dist/index.js",
   "updateUrl": "https://rawcdn.githack.com/DevouredXd/Testt/main/manifest.json"
 }
