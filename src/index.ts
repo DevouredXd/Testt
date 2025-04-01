@@ -1,59 +1,98 @@
-import { after } from "@vendetta/patcher";
+import { before, after } from "@vendetta/patcher";
 import { findByName, findByProps } from "@vendetta/metro";
-import { React } from "@vendetta/metro/common";
+import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
+import type { Patcher } from "@vendetta/patcher";
 
-// Find profile components
-const ProfileCard = findByName("ProfileCard") ?? findByProps("ProfileCard").ProfileCard;
-const Avatar = findByName("Avatar") ?? findByProps("Avatar").Avatar;
+const { TouchableOpacity } = ReactNative;
+
+// Type definitions for Discord components
+interface AvatarProps {
+    src: string;
+    size: number;
+    [key: string]: any;
+}
+
+interface ProfileCardProps {
+    bannerSource?: { uri: string };
+    children: React.ReactNode[];
+    [key: string]: any;
+}
 
 export default {
-  onLoad() {
-    const patches = [];
+    onLoad(): () => void {
+        const patches: Patcher[] = [];
 
-    // Make profile pictures clickable
-    patches.push(
-      after("default", Avatar, (_, component) => {
-        const { src, size } = component.props;
-        return React.createElement(
-          React.TouchableOpacity,
-          {
-            onPress: () => {
-              const url = src.replace(/size=\d+/, "size=4096");
-              showToast("Opening full avatar", { source: { uri: url } });
-            },
-            activeOpacity: 0.8
-          },
-          component
+        // 1. Make avatars clickable
+        const Avatar = findByName("Avatar") ?? findByProps("Avatar").Avatar;
+        patches.push(
+            after("default", Avatar, (args: [AvatarProps], component: React.ReactElement) => {
+                const [props] = args;
+                return (
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                            const highResUrl = props.src.replace(/(size)=\d+/, "$1=4096");
+                            showToast("Opening full avatar", { 
+                                source: { uri: highResUrl } 
+                            });
+                        }}
+                    >
+                        {component}
+                    </TouchableOpacity>
+                );
+            })
         );
-      })
-    );
 
-    // Make banners clickable
-    patches.push(
-      after("default", ProfileCard, (_, component) => {
-        const { bannerSource } = component.props;
-        if (!bannerSource) return component;
+        // 2. Make banners clickable
+        const ProfileCard = findByName("ProfileCard") ?? findByProps("ProfileCard").ProfileCard;
+        patches.push(
+            after("default", ProfileCard, (args: [ProfileCardProps], component: React.ReactElement) => {
+                const [props] = args;
+                if (!props.bannerSource) return component;
 
-        return React.cloneElement(component, {
-          children: [
-            React.createElement(
-              React.TouchableOpacity,
-              {
-                onPress: () => {
-                  const url = bannerSource.uri.replace(/width=\d+/, "width=1600");
-                  showToast("Opening full banner", { source: { uri: url } });
-                },
-                activeOpacity: 0.8
-              },
-              component.props.children[0] // Banner component
-            ),
-            ...component.props.children.slice(1)
-          ]
-        });
-      })
-    );
+                return React.cloneElement(component, {
+                    children: [
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                const highResUrl = props.bannerSource!.uri.replace(/(width)=\d+/, "$1=1600");
+                                showToast("Opening full banner", { 
+                                    source: { uri: highResUrl } 
+                                });
+                            }}
+                        >
+                            {props.children[0]}
+                        </TouchableOpacity>,
+                        ...props.children.slice(1)
+                    ]
+                });
+            })
+        );
 
-    return () => patches.forEach(p => p());
-  }
+        // 3. Make guild icons clickable
+        const GuildIcon = findByProps("GuildIcon")?.GuildIcon;
+        if (GuildIcon) {
+            patches.push(
+                after("default", GuildIcon, (args: [{ icon: string, size: number }], component: React.ReactElement) => {
+                    const [props] = args;
+                    return (
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                const highResUrl = `https://cdn.discordapp.com/icons/${props.guildId}/${props.icon}.png?size=4096`;
+                                showToast("Opening full server icon", { 
+                                    source: { uri: highResUrl } 
+                                });
+                            }}
+                        >
+                            {component}
+                        </TouchableOpacity>
+                    );
+                })
+            );
+        }
+
+        return () => patches.forEach(p => p.unpatch());
+    }
 };
