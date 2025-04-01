@@ -1,14 +1,9 @@
 {
-    "name": "Template Plugin",
-    "description": "A plugin for use as a template.",
-    "authors": [
-        {
-            "name": "Dev",
-            "id": "1084565263913070792"
-        }
-    ],
-    "main": "src/index.ts",
-    "vendetta": {
-        "icon": "ic_badge_staff"
-    }
+  "name": "Clickable Profiles",
+  "description": "Make avatars and banners clickable",
+  "version": "22",
+  "authors": ["You"],
+  "license": "MIT",
+  "main": "index.js",
+  "updateUrl": "https://rawcdn.githack.com/DevouredXd/Testt/main/manifest.json"
 }
